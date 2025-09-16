@@ -1,0 +1,33 @@
+name: "Standard Approval Workflow"
+description: "Default sequential approval through all departments"
+
+states:
+  - name: "draft"
+    type: "initial"
+  - name: "in_review"
+    type: "approval"
+  - name: "completed"
+    type: "terminal"
+  - name: "cancelled"
+    type: "terminal"
+
+transitions:
+  - from: "draft"
+    to: "in_review"
+    action: "submit"
+  - from: "in_review"
+    to: "in_review"
+    action: "approve"
+    condition: "not_final_approval"
+  - from: "in_review"
+    to: "completed"
+    action: "approve"
+    condition: "is_final_approval"
+  - from: "in_review"
+    to: "in_review"
+    action: "reject"
+
+approval_rules:
+  min_approvals: 1
+  allow_self_approval: false
+  escalation_timeout_hours: 48
