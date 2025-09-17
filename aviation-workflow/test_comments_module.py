@@ -103,7 +103,7 @@ def test_comment_model():
             author_name="Test User",
             comment_type="general",
             is_internal=False,
-            metadata={"test": "value"}
+            additional_data={"test": "value"}
         )
         
         assert comment.work_item_id == "test_work_item_123", "Work item ID should be set"

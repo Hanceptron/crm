@@ -48,9 +48,9 @@ class CommentRequest(BaseModel):
         description="ID of parent comment for replies"
     )
     
-    metadata: Optional[Dict[str, Any]] = Field(
+    additional_data: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
-        description="Additional comment metadata"
+        description="Additional comment data and metadata"
     )
     
     @validator('content')
@@ -95,9 +95,9 @@ class CommentUpdateRequest(BaseModel):
         description="Updated internal flag"
     )
     
-    metadata: Optional[Dict[str, Any]] = Field(
+    additional_data: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Updated comment metadata"
+        description="Updated comment data and metadata"
     )
     
     @validator('content')
@@ -131,7 +131,7 @@ class CommentResponse(BaseModel):
     comment_type: str
     is_internal: bool
     parent_comment_id: Optional[str]
-    metadata: Dict[str, Any]
+    additional_data: Dict[str, Any]
     created_at: str
     updated_at: Optional[str]
     

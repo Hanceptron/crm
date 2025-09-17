@@ -53,8 +53,9 @@ class WorkflowEngine:
     
     def _create_tracking_client(self) -> LocalTrackingClient:
         """Create Burr tracking client for state persistence."""
-        tracker_path = os.path.join(settings.burr_state_dir, "burr_state.db")
-        return LocalTrackingClient(tracker_path)
+        # Use a simple project name that Burr accepts (alphanumeric, underscore, dash only)
+        project_name = "aviation_workflow"
+        return LocalTrackingClient(project_name)
     
     def create_workflow(self, template: str, workflow_id: str, 
                        department_sequence: List[str], 

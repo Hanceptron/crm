@@ -61,11 +61,11 @@ class Comment(SQLModel, table=True):
         description="ID of parent comment for threading (optional)"
     )
     
-    # Metadata
-    metadata: Dict[str, Any] = Field(
+    # Additional data for the comment
+    additional_data: Dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON),
-        description="Additional comment metadata"
+        description="Additional comment data and metadata"
     )
     
     # Timestamps
@@ -96,7 +96,7 @@ class Comment(SQLModel, table=True):
             "comment_type": self.comment_type,
             "is_internal": self.is_internal,
             "parent_comment_id": self.parent_comment_id,
-            "metadata": self.metadata,
+            "additional_data": self.additional_data,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

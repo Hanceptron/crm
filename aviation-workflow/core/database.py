@@ -135,6 +135,15 @@ class DatabaseManager:
         except Exception:
             return False
     
+    def get_engine(self) -> Engine:
+        """
+        Get the database engine.
+        
+        Returns:
+            SQLAlchemy engine instance
+        """
+        return self.engine
+    
     def close(self) -> None:
         """Close database engine and all connections."""
         if self._engine:

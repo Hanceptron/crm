@@ -73,7 +73,7 @@ class WorkItem(SQLModel, table=True):
     )
     
     # Additional flexible data
-    metadata: Optional[Dict[str, Any]] = Field(
+    item_metadata: Optional[Dict[str, Any]] = Field(
         default=None,
         sa_column=Column(JSON),
         description="Flexible additional metadata"
@@ -132,7 +132,7 @@ class WorkItem(SQLModel, table=True):
             "current_state": self.current_state,
             "current_step": self.current_step,
             "workflow_data": self.workflow_data,
-            "metadata": self.metadata,
+            "metadata": self.item_metadata,
             "status": self.status,
             "priority": self.priority,
             "created_by": self.created_by,
@@ -164,6 +164,10 @@ class WorkItem(SQLModel, table=True):
         
         if "metadata" in data and isinstance(data["metadata"], str):
             data["metadata"] = json.loads(data["metadata"])
+        
+        # Map metadata field to item_metadata
+        if "metadata" in data:
+            data["item_metadata"] = data.pop("metadata")
         
         return cls(**data)
     

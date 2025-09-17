@@ -55,8 +55,8 @@ class Department(SQLModel, table=True):
         description="Department description"
     )
     
-    # Flexible metadata storage
-    metadata: Optional[Dict[str, Any]] = Field(
+    # Flexible metadata storage (renamed to avoid SQLModel conflict)
+    dept_metadata: Optional[Dict[str, Any]] = Field(
         default=None,
         sa_column=Column(JSON),
         description="Additional department metadata"
@@ -93,7 +93,7 @@ class Department(SQLModel, table=True):
             "name": self.name,
             "code": self.code,
             "description": self.description,
-            "metadata": self.metadata,
+            "metadata": self.dept_metadata,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
@@ -116,7 +116,7 @@ class Department(SQLModel, table=True):
         # Handle JSON fields
         if "metadata" in data and isinstance(data["metadata"], str):
             import json
-            data["metadata"] = json.loads(data["metadata"])
+            data["dept_metadata"] = json.loads(data["metadata"])
         
         return cls(**data)
     
@@ -136,9 +136,9 @@ class Department(SQLModel, table=True):
             key: Metadata key
             value: Metadata value
         """
-        if self.metadata is None:
-            self.metadata = {}
-        self.metadata[key] = value
+        if self.dept_metadata is None:
+            self.dept_metadata = {}
+        self.dept_metadata[key] = value
     
     def get_metadata_value(self, key: str, default: Any = None) -> Any:
         """
@@ -151,7 +151,7 @@ class Department(SQLModel, table=True):
         Returns:
             Metadata value or default
         """
-        return self.metadata.get(key, default) if self.metadata else default
+        return self.dept_metadata.get(key, default) if self.dept_metadata else default
     
     def __str__(self) -> str:
         """String representation of department."""

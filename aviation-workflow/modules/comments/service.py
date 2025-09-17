@@ -87,7 +87,7 @@ class CommentService:
                 comment_type=comment_data.comment_type or "general",
                 is_internal=comment_data.is_internal or False,
                 parent_comment_id=comment_data.parent_comment_id,
-                metadata=comment_data.metadata or {}
+                additional_data=comment_data.additional_data or {}
             )
             
             self.session.add(comment)
@@ -221,8 +221,8 @@ class CommentService:
             if update_data.is_internal is not None:
                 comment.is_internal = update_data.is_internal
             
-            if update_data.metadata is not None:
-                comment.metadata = update_data.metadata
+            if update_data.additional_data is not None:
+                comment.additional_data = update_data.additional_data
             
             self.session.add(comment)
             self.session.commit()

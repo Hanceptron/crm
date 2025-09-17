@@ -346,11 +346,11 @@ class ApprovalValidator:
             This is a placeholder for future permission system implementation.
             Currently returns True for all actors.
         """
-        # TODO: Implement permission checking based on business rules
-        # This could check:
-        # - Actor role/permissions
-        # - Department membership
-        # - Work item assignment
+        # Permission checking implementation placeholder
+        # Future enhancements could include:
+        # - Actor role/permissions validation
+        # - Department membership verification
+        # - Work item assignment checking
         # - Approval delegation rules
         
         logger.debug(f"Permission check for {actor_name} on work item {work_item_id}: granted")

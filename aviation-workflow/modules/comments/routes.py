@@ -61,7 +61,7 @@ async def add_comment(
             comment_type=comment.comment_type,
             is_internal=comment.is_internal,
             parent_comment_id=comment.parent_comment_id,
-            metadata=comment.metadata,
+            additional_data=comment.additional_data,
             created_at=comment.created_at.isoformat(),
             updated_at=comment.updated_at.isoformat() if comment.updated_at else None
         )
@@ -146,7 +146,7 @@ async def get_comments_for_work_item(
                 comment_type=comment.comment_type,
                 is_internal=comment.is_internal,
                 parent_comment_id=comment.parent_comment_id,
-                metadata=comment.metadata,
+                additional_data=comment.additional_data,
                 created_at=comment.created_at.isoformat(),
                 updated_at=comment.updated_at.isoformat() if comment.updated_at else None
             )
@@ -221,7 +221,7 @@ async def get_comment(
             comment_type=comment.comment_type,
             is_internal=comment.is_internal,
             parent_comment_id=comment.parent_comment_id,
-            metadata=comment.metadata,
+            additional_data=comment.additional_data,
             created_at=comment.created_at.isoformat(),
             updated_at=comment.updated_at.isoformat() if comment.updated_at else None
         )
@@ -266,7 +266,7 @@ async def update_comment(
             comment_type=comment.comment_type,
             is_internal=comment.is_internal,
             parent_comment_id=comment.parent_comment_id,
-            metadata=comment.metadata,
+            additional_data=comment.additional_data,
             created_at=comment.created_at.isoformat(),
             updated_at=comment.updated_at.isoformat() if comment.updated_at else None
         )
@@ -349,7 +349,7 @@ async def get_comment_thread(
                 comment_type=comment.comment_type,
                 is_internal=comment.is_internal,
                 parent_comment_id=comment.parent_comment_id,
-                metadata=comment.metadata,
+                additional_data=comment.additional_data,
                 created_at=comment.created_at.isoformat(),
                 updated_at=comment.updated_at.isoformat() if comment.updated_at else None
             )
@@ -434,7 +434,7 @@ async def search_comments(
                 comment_type=comment.comment_type,
                 is_internal=comment.is_internal,
                 parent_comment_id=comment.parent_comment_id,
-                metadata=comment.metadata,
+                additional_data=comment.additional_data,
                 created_at=comment.created_at.isoformat(),
                 updated_at=comment.updated_at.isoformat() if comment.updated_at else None
             )
@@ -472,7 +472,7 @@ async def get_comment_statistics(
                 comment_type=comment.comment_type,
                 is_internal=comment.is_internal,
                 parent_comment_id=comment.parent_comment_id,
-                metadata=comment.metadata,
+                additional_data=comment.additional_data,
                 created_at=comment.created_at.isoformat(),
                 updated_at=comment.updated_at.isoformat() if comment.updated_at else None
             )

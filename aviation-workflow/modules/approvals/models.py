@@ -86,8 +86,8 @@ class Approval(SQLModel, table=True):
         description="Name of the person who performed the action"
     )
     
-    # Flexible metadata storage
-    metadata: Optional[Dict[str, Any]] = Field(
+    # Flexible metadata storage (renamed to avoid SQLModel conflict)
+    approval_metadata: Optional[Dict[str, Any]] = Field(
         default=None,
         sa_column=Column(JSON),
         description="Additional approval metadata"
@@ -123,7 +123,7 @@ class Approval(SQLModel, table=True):
             "to_department_id": self.to_department_id,
             "comment": self.comment,
             "actor_name": self.actor_name,
-            "metadata": self.metadata,
+            "metadata": self.approval_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
     
@@ -145,7 +145,7 @@ class Approval(SQLModel, table=True):
         # Handle JSON fields
         if "metadata" in data and isinstance(data["metadata"], str):
             import json
-            data["metadata"] = json.loads(data["metadata"])
+            data["approval_metadata"] = json.loads(data["metadata"])
         
         return cls(**data)
     
@@ -176,7 +176,7 @@ class Approval(SQLModel, table=True):
         Returns:
             Metadata value or default
         """
-        return self.metadata.get(key, default) if self.metadata else default
+        return self.approval_metadata.get(key, default) if self.approval_metadata else default
     
     def set_metadata_value(self, key: str, value: Any) -> None:
         """
@@ -186,9 +186,9 @@ class Approval(SQLModel, table=True):
             key: Metadata key
             value: Metadata value
         """
-        if self.metadata is None:
-            self.metadata = {}
-        self.metadata[key] = value
+        if self.approval_metadata is None:
+            self.approval_metadata = {}
+        self.approval_metadata[key] = value
     
     def get_transition_summary(self) -> str:
         """

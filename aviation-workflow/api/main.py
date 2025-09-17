@@ -48,11 +48,20 @@ class WorkItemCreate(BaseModel):
     """Request model for creating work items."""
     title: str = Field(..., min_length=1, max_length=255, description="Work item title")
     description: Optional[str] = Field(None, max_length=5000, description="Work item description")
-    template_id: str = Field(..., description="Workflow template identifier")
-    department_ids: List[str] = Field(..., min_items=1, description="List of department IDs for workflow")
+    template_id: Optional[str] = Field(None, description="Workflow template identifier")
+    template_name: Optional[str] = Field(None, description="Workflow template name (alternative to template_id)")
+    department_ids: Optional[List[str]] = Field(None, min_items=1, description="List of department IDs for workflow (optional if using template)")
     priority: Optional[str] = Field("normal", description="Priority level (normal, urgent)")
     created_by: Optional[str] = Field("system", description="User who created the work item")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    
+    @validator('template_id')
+    def validate_template_id_or_name(cls, v, values):
+        """Validate that either template_id or template_name is provided."""
+        template_name = values.get('template_name')
+        if not v and not template_name:
+            raise ValueError('Either template_id or template_name must be provided')
+        return v
 
 
 class WorkItemResponse(BaseModel):
@@ -236,7 +245,7 @@ async def list_work_items(
                 current_state=item.current_state,
                 current_step=item.current_step,
                 workflow_data=item.workflow_data,
-                metadata=item.metadata,
+                metadata=item.item_metadata,
                 status=item.status,
                 priority=item.priority,
                 created_by=item.created_by,
@@ -279,18 +288,80 @@ async def create_work_item(
         Created work item with workflow information
     """
     try:
+        # Get template and determine configuration
+        template = None
+        template_id = work_item_data.template_id
+        department_ids = work_item_data.department_ids
+        approval_rules = {}
+        workflow_config = {}
+        
+        # Try to load template from templates module if available
+        try:
+            from modules.templates.service import TemplateService
+            template_service = TemplateService(session)
+            
+            # Get template by ID or name
+            if work_item_data.template_id:
+                template = template_service.get_template(work_item_data.template_id)
+            elif work_item_data.template_name:
+                template = template_service.get_template_by_name(work_item_data.template_name)
+                template_id = template.id
+            
+            if template:
+                # Use template's department sequence if not provided
+                if not department_ids:
+                    department_ids = template.department_sequence
+                
+                # Get approval rules and workflow config from template
+                approval_rules = template.approval_rules
+                workflow_config = template.workflow_config
+                
+                # Record template usage
+                template_service.record_template_usage(
+                    template_id=template.id,
+                    work_item_id="pending",  # Will update after work item creation
+                    used_by=work_item_data.created_by
+                )
+                
+        except ImportError:
+            # Templates module not available, use provided data
+            if not template_id:
+                template_id = "sequential_approval"  # Default template
+            if not department_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="department_ids required when templates module not available"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to load template: {e}")
+            # Fall back to provided data
+            if not template_id:
+                template_id = "sequential_approval"  # Default template
+            if not department_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="department_ids required when template loading fails"
+                )
+        
         # Validate department sequence
-        department_ids = validate_department_sequence(work_item_data.department_ids)
+        final_department_ids = validate_department_sequence(department_ids)
+        
+        # Prepare workflow data
+        workflow_data = {
+            "department_sequence": final_department_ids,
+            "approval_rules": approval_rules,
+            "workflow_config": workflow_config
+        }
         
         # Create work item
         work_item = WorkItem(
             title=work_item_data.title,
             description=work_item_data.description,
-            workflow_template=work_item_data.template_id,
+            workflow_template=template_id,
             current_state="draft",
             current_step=0,
-            workflow_data={"department_sequence": department_ids},
-            metadata=work_item_data.metadata,
+            workflow_data=workflow_data,
+            item_metadata=work_item_data.metadata,
             priority=work_item_data.priority,
             created_by=work_item_data.created_by
         )
@@ -303,9 +374,9 @@ async def create_work_item(
         # Create workflow
         try:
             workflow_engine.create_workflow(
-                template=work_item_data.template_id,
+                template=template_id,
                 workflow_id=work_item.id,
-                department_sequence=department_ids
+                department_sequence=final_department_ids
             )
             
             # Update work item with initial workflow state
@@ -324,6 +395,17 @@ async def create_work_item(
                 detail=f"Failed to create workflow: {str(e)}"
             )
         
+        # Update template usage with actual work item ID if we used a template
+        if template:
+            try:
+                template_service.record_template_usage(
+                    template_id=template.id,
+                    work_item_id=work_item.id,
+                    used_by=work_item_data.created_by
+                )
+            except Exception as e:
+                logger.warning(f"Failed to update template usage: {e}")
+        
         # Return created work item
         return WorkItemResponse(
             id=work_item.id,
@@ -333,7 +415,7 @@ async def create_work_item(
             current_state=work_item.current_state,
             current_step=work_item.current_step,
             workflow_data=work_item.workflow_data,
-            metadata=work_item.metadata,
+            metadata=work_item.item_metadata,
             status=work_item.status,
             priority=work_item.priority,
             created_by=work_item.created_by,
@@ -385,7 +467,7 @@ async def get_work_item(
             current_state=work_item.current_state,
             current_step=work_item.current_step,
             workflow_data=work_item.workflow_data,
-            metadata=work_item.metadata,
+            metadata=work_item.item_metadata,
             status=work_item.status,
             priority=work_item.priority,
             created_by=work_item.created_by,
@@ -483,7 +565,7 @@ async def execute_transition(
                     current_state=work_item.current_state,
                     current_step=work_item.current_step,
                     workflow_data=work_item.workflow_data,
-                    metadata=work_item.metadata,
+                    metadata=work_item.item_metadata,
                     status=work_item.status,
                     priority=work_item.priority,
                     created_by=work_item.created_by,
