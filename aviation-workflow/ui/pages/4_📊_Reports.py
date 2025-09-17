@@ -8,8 +8,12 @@ department performance metrics, approval rates, and workflow insights.
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except Exception:
+    PLOTLY_AVAILABLE = False
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
@@ -267,7 +271,7 @@ def render_status_distribution(status_counts: Dict[str, int], chart_type: str):
     statuses = list(status_counts.keys())
     counts = list(status_counts.values())
     
-    if chart_type == "interactive":
+    if chart_type == "interactive" and PLOTLY_AVAILABLE:
         # Plotly pie chart
         fig = px.pie(
             values=counts,
@@ -302,7 +306,7 @@ def render_priority_breakdown(priority_counts: Dict[str, int], chart_type: str):
     priorities = list(priority_counts.keys())
     counts = list(priority_counts.values())
     
-    if chart_type == "interactive":
+    if chart_type == "interactive" and PLOTLY_AVAILABLE:
         # Plotly bar chart
         color_map = {
             'critical': '#6f42c1',
@@ -358,7 +362,7 @@ def render_department_workload(department_workload: Dict[str, int], chart_type: 
     departments = [dept_names.get(d, d) for d in department_workload.keys()]
     workloads = list(department_workload.values())
     
-    if chart_type == "interactive":
+    if chart_type == "interactive" and PLOTLY_AVAILABLE:
         # Plotly horizontal bar chart
         fig = go.Figure(data=[
             go.Bar(
@@ -611,14 +615,15 @@ def main():
     date_range, selected_depts, status_filter, chart_type = render_report_controls()
     
     # Get work items
-    work_items = get_api_data("work-items")
+    raw = get_api_data("work-items")
+    work_items = _extract_work_items(raw)
     
     if not work_items:
         st.warning("Unable to load work items for analysis")
         return
     
     # Apply filters
-    filtered_items = work_items.copy()
+    filtered_items = list(work_items)
     
     # Filter by date range
     filtered_items = filter_data_by_date(filtered_items, date_range)
@@ -682,6 +687,28 @@ def main():
         
     else:
         st.warning("No data matches the selected filters")
+
+def _extract_work_items(data: Any) -> List[Dict]:
+    """Normalize API response to a list of work items."""
+    items: List[Dict] = []
+    if isinstance(data, dict) and isinstance(data.get("items"), list):
+        items = data["items"]
+    elif isinstance(data, list):
+        items = data
+    else:
+        return []
+
+    # Derive department_ids from workflow_data if missing
+    normalized: List[Dict] = []
+    for it in items:
+        if isinstance(it, dict):
+            wf = it.get("workflow_data") or {}
+            dept_seq = wf.get("department_sequence") if isinstance(wf, dict) else []
+            if "department_ids" not in it:
+                it = {**it, "department_ids": dept_seq or []}
+            normalized.append(it)
+    return normalized
+
 
 if __name__ == "__main__":
     main()

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from core.config import settings
 from core.database import init_db, db_manager
@@ -55,13 +55,12 @@ class WorkItemCreate(BaseModel):
     created_by: Optional[str] = Field("system", description="User who created the work item")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
     
-    @validator('template_id')
-    def validate_template_id_or_name(cls, v, values):
-        """Validate that either template_id or template_name is provided."""
-        template_name = values.get('template_name')
-        if not v and not template_name:
-            raise ValueError('Either template_id or template_name must be provided')
-        return v
+    @model_validator(mode="after")
+    def validate_template_choice(self):
+        """Ensure either template_id or template_name is provided."""
+        if not getattr(self, "template_id", None) and not getattr(self, "template_name", None):
+            raise ValueError("Either template_id or template_name must be provided")
+        return self
 
 
 class WorkItemResponse(BaseModel):
@@ -119,14 +118,14 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Aviation Workflow System")
     
     try:
-        # Initialize database
-        logger.info("📊 Initializing database...")
-        init_db()
-        
-        # Load enabled modules
+        # Load enabled modules FIRST so their models are registered
         logger.info("🔌 Loading enabled modules...")
         plugin_manager = get_plugin_manager()
         plugin_manager.load_enabled_modules()
+
+        # Initialize database AFTER modules are loaded so module tables are created
+        logger.info("📊 Initializing database...")
+        init_db()
         
         # Register module routes
         logger.info("🛣️  Registering module routes...")

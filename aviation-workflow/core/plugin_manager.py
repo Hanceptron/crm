@@ -217,11 +217,9 @@ class PluginManager:
         for module_name, module_interface in self._loaded_modules.items():
             if module_interface.router:
                 try:
-                    app.include_router(
-                        module_interface.router,
-                        prefix=settings.api_prefix,
-                        tags=[module_name]
-                    )
+                    # Routers already define their own prefixes (e.g., 
+                    # "/api/departments"). Avoid duplicating the API prefix.
+                    app.include_router(module_interface.router)
                     logger.info(f"Registered routes for module: {module_name}")
                 except Exception as e:
                     logger.error(f"Error registering routes for module {module_name}: {e}")

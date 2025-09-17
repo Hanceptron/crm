@@ -143,7 +143,7 @@ def create_database_tables(force: bool = False):
     """Create database tables for all registered models."""
     try:
         db_manager = DatabaseManager()
-        engine = db_manager.get_engine()
+        engine = db_manager.engine
         
         # Get existing tables
         existing_tables = get_existing_tables()

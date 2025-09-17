@@ -83,14 +83,13 @@ def kill_processes_on_ports(ports: List[int]):
     """Kill any processes running on specified ports."""
     for port in ports:
         try:
-            for proc in psutil.process_iter(['pid', 'name', 'connections']):
+            for proc in psutil.process_iter(['pid', 'name']):
                 try:
-                    if proc.info['connections']:
-                        for conn in proc.info['connections']:
-                            if conn.laddr.port == port:
-                                logger.info(f"🔄 Killing process {proc.info['pid']} on port {port}")
-                                psutil.Process(proc.info['pid']).terminate()
-                                break
+                    for conn in proc.connections(kind='inet'):
+                        if conn.laddr and conn.laddr.port == port:
+                            logger.info(f"🔄 Killing process {proc.info['pid']} on port {port}")
+                            psutil.Process(proc.info['pid']).terminate()
+                            break
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
         except Exception as e:
@@ -135,7 +134,7 @@ def check_database_connection():
     """Test database connection."""
     try:
         db_manager = DatabaseManager()
-        engine = db_manager.get_engine()
+        engine = db_manager.engine
         
         from sqlmodel import text
         with engine.connect() as conn:
@@ -251,17 +250,13 @@ def start_streamlit_dashboard() -> Optional[subprocess.Popen]:
             return None
     
     try:
-        # Check if dashboard.py exists
+        # Run the real Streamlit UI app
         dashboard_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "dashboard",
-            "main.py"
+            "ui",
+            "app.py"
         )
-        
-        if not os.path.exists(dashboard_path):
-            logger.warning("⚠️  Streamlit dashboard not found. Creating placeholder...")
-            create_placeholder_dashboard(dashboard_path)
-        
+
         cmd = [
             sys.executable, "-m", "streamlit",
             "run", dashboard_path,

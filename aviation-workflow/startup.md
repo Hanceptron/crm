@@ -324,7 +324,25 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 
 # Reinstall dependencies with pydantic-settings fix
 pip install --upgrade pip
-pip install --force-reinstall fastapi[all] uvicorn sqlmodel streamlit burr pydantic pydantic-settings python-dotenv
+pip install --force-reinstall fastapi[all] uvicorn sqlmodel streamlit burr pydantic pydantic-settings python-dotenv requests psutil
+```
+
+#### 🔴 Streamlit UI Errors
+```bash
+# If you see TypeError or AttributeError in Streamlit pages
+# The UI has been fixed to handle various data types properly
+
+# Check if all UI files have valid syntax
+python3 -c "
+import ast
+files = ['ui/app.py', 'ui/pages/1_📋_Dashboard.py', 'ui/pages/2_➕_Create_Item.py', 'ui/pages/3_✅_Approvals.py', 'ui/pages/4_📊_Reports.py']
+for f in files:
+    try:
+        ast.parse(open(f).read())
+        print(f'✅ {f}: OK')
+    except Exception as e:
+        print(f'❌ {f}: {e}')
+"
 ```
 
 #### 🔴 Virtual Environment Issues

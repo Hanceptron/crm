@@ -141,9 +141,14 @@ def render_quick_stats(work_items: List[Dict[str, Any]]):
     overdue_count = 0
     
     for item in work_items:
-        status = item.get('status', 'unknown')
-        priority = item.get('priority', 'unknown')
-        due_date = item.get('due_date')
+        # Handle case where item might be a string instead of dict
+        if isinstance(item, dict):
+            status = item.get('status', 'unknown')
+            priority = item.get('priority', 'unknown')
+            due_date = item.get('due_date')
+        else:
+            # Skip non-dict items
+            continue
         
         status_counts[status] = status_counts.get(status, 0) + 1
         priority_counts[priority] = priority_counts.get(priority, 0) + 1

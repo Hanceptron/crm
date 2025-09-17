@@ -135,6 +135,10 @@ def get_pending_approvals() -> List[Dict[str, Any]]:
     current_dept = st.session_state.current_user_dept
     
     for item in work_items:
+        # Handle case where item might be a string instead of dict
+        if not isinstance(item, dict):
+            continue
+        
         dept_ids = item.get('department_ids', [])
         current_step = item.get('current_step', 0)
         status = item.get('status', '')

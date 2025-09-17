@@ -96,12 +96,27 @@ def render_template_selector():
     # Get available templates
     templates = get_api_data("templates")
     
+    # Handle different response formats
+    if templates is None:
+        templates = []
+    elif isinstance(templates, dict):
+        # If templates come wrapped in a dict, extract the list
+        templates = templates.get('templates', templates.get('items', [templates]))
+    elif not isinstance(templates, list):
+        # If it's a single template, wrap in list
+        templates = [templates]
+    
     if not templates:
         st.warning("No workflow templates available")
         return None
     
-    # Template selection
-    template_options = ["Create Custom Workflow"] + [t['display_name'] for t in templates]
+    # Template selection - handle both dict and string templates
+    template_options = ["Create Custom Workflow"]
+    for t in templates:
+        if isinstance(t, dict):
+            template_options.append(t.get('display_name', t.get('name', 'Unknown Template')))
+        else:
+            template_options.append(str(t))
     
     selected_option = st.selectbox(
         "Select a template or create custom workflow:",
@@ -115,11 +130,25 @@ def render_template_selector():
         return None
     else:
         st.session_state.form_mode = "template"
-        # Find selected template
-        selected_template = next(
-            (t for t in templates if t['display_name'] == selected_option), 
-            None
-        )
+        # Find selected template - handle both dict and string templates
+        selected_template = None
+        for t in templates:
+            if isinstance(t, dict):
+                display_name = t.get('display_name', t.get('name', 'Unknown Template'))
+                if display_name == selected_option:
+                    selected_template = t
+                    break
+            else:
+                if str(t) == selected_option:
+                    # Convert string template to dict format
+                    selected_template = {
+                        'name': str(t),
+                        'display_name': str(t),
+                        'description': f'Template: {str(t)}',
+                        'department_sequence': [],
+                        'approval_rules': {}
+                    }
+                    break
         st.session_state.selected_template = selected_template
         
         if selected_template:
@@ -148,12 +177,31 @@ def render_custom_department_builder():
     # Get available departments
     departments = get_api_data("departments")
     
+    # Handle different response formats
+    if departments is None:
+        departments = []
+    elif isinstance(departments, dict):
+        # If departments come wrapped in a dict, extract the list
+        departments = departments.get('departments', departments.get('items', [departments]))
+    elif not isinstance(departments, list):
+        # If it's a single department, wrap in list
+        departments = [departments]
+    
     if not departments:
         st.warning("No departments available")
         return []
     
-    # Department selection
-    available_departments = {dept['name']: dept['display_name'] for dept in departments}
+    # Department selection - handle both dict and string departments
+    available_departments = {}
+    for dept in departments:
+        if isinstance(dept, dict):
+            name = dept.get('name', 'unknown')
+            display_name = dept.get('display_name', name)
+            available_departments[name] = display_name
+        else:
+            # Handle string departments
+            dept_str = str(dept)
+            available_departments[dept_str] = dept_str
     
     st.write("**Step 1: Select Departments**")
     st.caption("Choose departments and arrange them in the order items should flow through")

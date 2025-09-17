@@ -84,9 +84,15 @@ def check_api_connection() -> bool:
 def get_api_data(endpoint: str) -> Optional[Dict]:
     """Get data from API endpoint with error handling."""
     try:
+        # Clean up endpoint - remove leading slash if present
+        endpoint = endpoint.lstrip('/')
         response = requests.get(f"{API_URL}/{endpoint}", timeout=10)
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except ValueError:
+                st.error("Invalid JSON response from API")
+                return None
         else:
             st.error(f"API Error {response.status_code}: {response.text}")
             return None
@@ -111,6 +117,28 @@ def initialize_session_state():
     if "last_refresh" not in st.session_state:
         st.session_state.last_refresh = datetime.now()
 
+def _extract_work_items(data: Any) -> List[Dict]:
+    """Normalize API response to a list of work items."""
+    items: List[Dict] = []
+    if isinstance(data, dict) and isinstance(data.get("items"), list):
+        items = data["items"]
+    elif isinstance(data, list):
+        items = data
+    else:
+        return []
+
+    # Derive department_ids from workflow_data if missing
+    normalized: List[Dict] = []
+    for it in items:
+        if isinstance(it, dict):
+            wf = it.get("workflow_data") or {}
+            dept_seq = wf.get("department_sequence") if isinstance(wf, dict) else []
+            if "department_ids" not in it:
+                it = {**it, "department_ids": dept_seq or []}
+            normalized.append(it)
+    return normalized
+
+
 def render_sidebar():
     """Render the sidebar with navigation and system status."""
     with st.sidebar:
@@ -134,10 +162,13 @@ def render_sidebar():
                 st.info(f"Database: {health_data.get('database', 'Unknown')}")
                 
                 loaded_modules = health_data.get('loaded_modules', [])
-                if loaded_modules:
+                if loaded_modules and isinstance(loaded_modules, list):
                     st.subheader("📦 Active Modules")
                     for module in loaded_modules:
                         st.write(f"• {module}")
+                elif loaded_modules:
+                    st.subheader("📦 Active Modules")
+                    st.write(f"• {loaded_modules}")
         else:
             st.error("❌ API Disconnected")
             st.warning("Please start the API server")
@@ -176,11 +207,13 @@ def render_sidebar():
             st.subheader("📊 Quick Stats")
             
             # Get work items for stats
-            work_items = get_api_data("work-items")
-            if work_items:
+            raw = get_api_data("work-items")
+            work_items = _extract_work_items(raw)
+            if work_items is not None:
                 total_items = len(work_items)
-                pending_items = len([item for item in work_items if item.get('status') == 'pending'])
-                in_progress_items = len([item for item in work_items if item.get('status') == 'in_progress'])
+                # Map API statuses to UI buckets (rough)
+                pending_items = len([item for item in work_items if item.get('status') in ['active', 'pending']])
+                in_progress_items = len([item for item in work_items if item.get('status') in ['active']])
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -270,7 +303,8 @@ def render_work_items_view():
         )
     
     # Get work items
-    work_items = get_api_data("work-items")
+    raw = get_api_data("work-items")
+    work_items = _extract_work_items(raw)
     
     if not work_items:
         st.warning("No work items found or unable to connect to API")
@@ -303,7 +337,8 @@ def render_my_approvals_view():
     st.subheader("✅ My Pending Approvals")
     st.info(f"Showing items pending approval in **{st.session_state.user_department}** department")
     
-    work_items = get_api_data("work-items")
+    raw = get_api_data("work-items")
+    work_items = _extract_work_items(raw)
     
     if not work_items:
         st.warning("Unable to load work items")
@@ -353,7 +388,8 @@ def render_analytics_view():
     """Render analytics and statistics."""
     st.subheader("📊 System Analytics")
     
-    work_items = get_api_data("work-items")
+    raw = get_api_data("work-items")
+    work_items = _extract_work_items(raw)
     
     if not work_items:
         st.warning("Unable to load analytics data")
